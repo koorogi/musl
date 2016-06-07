@@ -10,3 +10,5 @@ static inline struct pthread *__pthread_self()
 }
 
 #define TP_ADJ(p) (p)
+
+#define MC_PC psw.addr
