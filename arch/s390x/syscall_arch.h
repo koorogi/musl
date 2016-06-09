@@ -61,6 +61,8 @@ static inline long __syscall5(long n, long a, long b, long c, long d, long e)
 
 static inline long __syscall6(long n, long a, long b, long c, long d, long e, long f)
 {
+	if (n == SYS_mmap) return __syscall1(n, (long)(long[]){a,b,c,d,e,f});
+
 	register long r1 __asm__("r1") = n;
 	register long r2 __asm__("r2") = a;
 	register long r3 __asm__("r3") = b;
