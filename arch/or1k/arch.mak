@@ -1,1 +1,1 @@
-ARCH_FALLBACKS = or1k generic-32 generic-be generic
+ARCH_FALLBACKS = or1k generic-32 generic-be generic-ld64 generic
