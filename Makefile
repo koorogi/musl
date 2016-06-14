@@ -46,7 +46,7 @@ CFLAGS_AUTO = -Os -pipe
 CFLAGS_C99FSE = -std=c99 -ffreestanding -nostdinc 
 
 CFLAGS_ALL = $(CFLAGS_C99FSE)
-CFLAGS_ALL += -D_XOPEN_SOURCE=700 -I$(srcdir)/arch/$(ARCH) -I$(srcdir)/arch/generic -Iobj/src/internal -I$(srcdir)/src/internal -Iobj/include -I$(srcdir)/include
+CFLAGS_ALL += -D_XOPEN_SOURCE=700 $(foreach a,$(ARCH_FALLBACKS),-I$(srcdir)/arch/$(a)) -Iobj/src/internal -I$(srcdir)/src/internal -Iobj/include -I$(srcdir)/include
 CFLAGS_ALL += $(CPPFLAGS) $(CFLAGS_AUTO) $(CFLAGS)
 
 LDFLAGS_ALL = $(LDFLAGS_AUTO) $(LDFLAGS)
@@ -55,10 +55,9 @@ AR      = $(CROSS_COMPILE)ar
 RANLIB  = $(CROSS_COMPILE)ranlib
 INSTALL = $(srcdir)/tools/install.sh
 
-ARCH_INCLUDES = $(wildcard $(srcdir)/arch/$(ARCH)/bits/*.h)
-GENERIC_INCLUDES = $(wildcard $(srcdir)/arch/generic/bits/*.h)
+ARCH_INCLUDES = $(sort $(foreach a,$(ARCH_FALLBACKS),$(patsubst $(srcdir)/arch/$(a)/%,include/%,$(wildcard $(srcdir)/arch/$(a)/bits/*.h))))
 INCLUDES = $(wildcard $(srcdir)/include/*.h $(srcdir)/include/*/*.h)
-ALL_INCLUDES = $(sort $(INCLUDES:$(srcdir)/%=%) $(GENH:obj/%=%) $(ARCH_INCLUDES:$(srcdir)/arch/$(ARCH)/%=include/%) $(GENERIC_INCLUDES:$(srcdir)/arch/generic/%=include/%))
+ALL_INCLUDES = $(sort $(INCLUDES:$(srcdir)/%=%) $(GENH:obj/%=%) $(ARCH_INCLUDES))
 
 EMPTY_LIB_NAMES = m rt pthread crypt util xnet resolv dl
 EMPTY_LIBS = $(EMPTY_LIB_NAMES:%=lib/lib%.a)
@@ -84,6 +83,12 @@ all:
 
 else
 
+-include $(srcdir)/arch/$(ARCH)/arch.mak
+
+ifeq ($(ARCH_FALLBACKS),)
+ARCH_FALLBACKS = $(ARCH) generic
+endif
+
 all: $(ALL_LIBS) $(ALL_TOOLS)
 
 OBJ_DIRS = $(sort $(patsubst %/,%,$(dir $(ALL_LIBS) $(ALL_TOOLS) $(ALL_OBJS) $(GENH) $(GENH_INT))) obj/include)
@@ -99,6 +104,12 @@ obj/include/bits/alltypes.h: $(srcdir)/arch/$(ARCH)/bits/alltypes.h.in $(srcdir)
 obj/include/bits/syscall.h: $(srcdir)/arch/$(ARCH)/bits/syscall.h.in
 	cp $< $@
 	sed -n -e s/__NR_/SYS_/p < $< >> $@
+
+define mkarchheaders
+$(DESTDIR)$(includedir)/bits/%: $(srcdir)/arch/$(1)/bits/%
+	$(INSTALL) -D -m 644 $$< $$@
+endef
+$(foreach a,$(ARCH_FALLBACKS),$(eval $(call mkarchheaders,$(a))))
 
 obj/src/internal/version.h: $(wildcard $(srcdir)/VERSION $(srcdir)/.git)
 	printf '#define VERSION "%s"\n' "$$(cd $(srcdir); sh tools/version.sh)" > $@
@@ -200,12 +211,6 @@ $(DESTDIR)$(libdir)/%.so: lib/%.so
 	$(INSTALL) -D -m 755 $< $@
 
 $(DESTDIR)$(libdir)/%: lib/%
-	$(INSTALL) -D -m 644 $< $@
-
-$(DESTDIR)$(includedir)/bits/%: $(srcdir)/arch/$(ARCH)/bits/%
-	$(INSTALL) -D -m 644 $< $@
-
-$(DESTDIR)$(includedir)/bits/%: $(srcdir)/arch/generic/bits/%
 	$(INSTALL) -D -m 644 $< $@
 
 $(DESTDIR)$(includedir)/bits/%: obj/include/bits/%
