@@ -13,3 +13,5 @@
 
 #define CRTJMP(pc,sp) __asm__ __volatile__( \
 	"lgr %%r15,%1; br %0" : : "r"(pc), "r"(sp) : "memory" )
+
+#define HashEnt uint64_t
