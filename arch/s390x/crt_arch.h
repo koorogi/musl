@@ -5,7 +5,7 @@ __asm__(
 START ":\n"
 "	lgr  %r2, %r15\n"
 "	larl %r3, 1f\n"
-"	ag   %r3, 0(%r3)\n"
+"	agf  %r3, 0(%r3)\n"
 "	aghi %r15, -160\n"
 "	lghi %r0, 0\n"
 "	stg  %r0, 0(%r15)\n"
